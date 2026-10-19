@@ -1,0 +1,150 @@
+{
+  "name": "Processo de RPA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clientes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -736,
+        -16
+      ],
+      "id": "2e47c6b1-8121-4598-8e52-e018d1d4f5f2",
+      "name": "Webhook",
+      "webhookId": "05c214d2-95ca-46a5-8a2e-c37d24173387"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -16,
+        -16
+      ],
+      "id": "0f5644cd-5cf7-4ba1-9ae4-870194d9a05c",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "url": "=https://digitalinnovationone.github.io/dio-lab-assistente-investimentos-rpa-n8n/data.csv",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -544,
+        -16
+      ],
+      "id": "249a48b7-2db5-4741-b149-d982bf1c2679",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        -16
+      ],
+      "id": "6540056f-c21c-4728-a3e4-c10906f31eec",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $('Webhook').first().json;\nconst clientes = webhook.body?.clientes ?? webhook.clientes;\nconst investimentos = $input.all().map(item => item.json);\n\nif (!Array.isArray(clientes)) {\n  throw new Error('O Webhook não recebeu uma lista válida em \"clientes\".');\n}\n\nfunction numeroBR(valor) {\n  const normalizado = String(valor)\n    .replace(/[^\\d,.-]/g, '')\n    .replace(/\\./g, '')\n    .replace(',', '.');\n\n  const numero = Number(normalizado);\n  if (!Number.isFinite(numero)) {\n    throw new Error(`Valor monetário inválido: ${valor}`);\n  }\n  return numero;\n}\n\nreturn clientes.map(cliente => {\n  const saldo = numeroBR(cliente.saldo);\n\n  const opcoes = investimentos\n    .filter(item =>\n      item.perfil === cliente.perfil &&\n      saldo >= numeroBR(item.minimo)\n    )\n    .map(item => ({\n      produto: item.produto,\n      minimo: item.minimo,\n      rentabilidade: item.rentabilidade,\n    }));\n\n  const mensagem = opcoes.length\n    ? `Olá, ${cliente.nome}! Para o perfil ${cliente.perfil}, encontramos estas opções que atendem ao saldo informado: ${opcoes.map(opcao => opcao.produto).join(', ')}.`\n    : `Olá, ${cliente.nome}! No momento, não encontramos uma opção do perfil ${cliente.perfil} cujo valor mínimo caiba no saldo informado.`;\n\n  return {\n    json: {\n      ...cliente,\n      opcoes,\n      mensagem,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        -16
+      ],
+      "id": "6eaea7c5-7f76-4d4f-8441-24e9210040d0",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1add06e6-4cd0-495e-84e4-3d40556eff04",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "472316f944b2f3f3574ba836f1f45016387085f157d0a92fdc593bcc3c1cdcef"
+  },
+  "nodeGroups": [],
+  "id": "MGPjGaJ11dFRsods",
+  "tags": []
+}
